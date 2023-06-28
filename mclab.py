@@ -56,6 +56,7 @@ class McOrder:
         for k,v in self.contact_info.items():
             if k in McOrder.cells:
                 self.sheet[McOrder.cells[k]] = v
+        self.sheet[McOrder.cells["date"]] = self.today
 
     # TODO: do we just access our instance fields instead of
     # passing in as parameter?
