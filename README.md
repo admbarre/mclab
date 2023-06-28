@@ -3,19 +3,19 @@ Tools for interfacing with McLab's Sequencing service
 
 ## Overview
 ### McLab
-Module for interfacing with McLab's excel order form
+- Module for interfacing with McLab's excel order form
 
 ### McOrder
-Module for placing order using google sheets api
+- Module for placing order using google sheets api
 
 ### McDown
-Module for donwloading data from McLab
+- Module for donwloading data from McLab
 
 ### process_results
-Module for scanning sequence reads for barcodes
+- Module for scanning sequence reads for barcodes
 
 ### barcode
-Module for scanning for scanning for barcodes
+- Module for scanning for scanning for barcodes
 
 ## Future
 - Clean up barcode code
