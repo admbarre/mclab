@@ -26,3 +26,5 @@ Tools for interfacing with McLab's Sequencing service
   - Allow for specifying different users
   - Allow for clearer ordering
 - Revamp download code to bring in everything not just latest and organize by date (this is important for reruns)
+- Allow for full ordering sequence (entry into McLab) from program
+  - be really careful with this, actual money LOL
