@@ -107,8 +107,7 @@ class McOrder:
             vol_needed = rxn_count * 3 # 1ul per rxn, McLab asked for 3x margin
             print(f"Primer: {p} minimum volume: {vol_needed}ul")
             
-        #print("Get these primers out for use:")
-        #print(unique_primers)
+        print(f"Reactions: {len(rxns)}")
         return rxns
 
     def load_meltemps(self,filename):

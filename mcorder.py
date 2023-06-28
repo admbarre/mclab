@@ -47,6 +47,10 @@ if __name__ == "__main__":
         # TODO: make it so we can create new users and then select from them
         contact_path = "res/contact.json"
         contact_info = load_contact_info(contact_path)
+
+        # TODO: printing PO for ease of copying into online order
+        # This should be replaced by automatic ordering through Selenium
+        print(f"PO: {contact_info['po']}")
         order = mclab.McOrder(rxns_info,contact_info)
         save_dir = os.path.abspath("orders")
         filename = order.save(save_dir)
