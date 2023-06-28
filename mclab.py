@@ -1,5 +1,7 @@
 from openpyxl import load_workbook
 from dataclasses import dataclass, astuple
+from collections import Counter
+
 import datetime
 import sys
 import pandas as pd
@@ -9,24 +11,37 @@ import pandas as pd
 class McOrder:
     # Static fields... I think
     mcform_template = "res/mcform.xlsx"
-    cells = { "date": "J3",
-              "name": "D5",
-              "institution": "D6",
-              "address": "D7",
-              "city_state_zip": "D8",
-              "phone": "D9",
-              "fax": "D10",
-              "email": "D11",
-              "po": "I5"}
+    cells = { 
+        "date": "J3",
+        "name": "D5",
+        "institution": "D6",
+        "address": "D7",
+        "city_state_zip": "D8",
+        "phone": "D9",
+        "fax": "D10",
+        "email": "D11",
+        "po": "I5"}
+    info_cols = {
+        "C": "t_name",
+        "D": "t_conc",
+        "E": "p_name",
+        "F": "p_conc",
+        "G": "p_melt",
+        "H": "t_type",
+        "I": "t_size",
+        "J": "p_handle"}
     order_sheet = "Sheet1"
 
-    GC_RICH = ["p278"]
+    # TODO: this should be calculated in primer sheet
+    # McLab said they run everything normally anyway and only do GC rich 
+    # if run fails, so this might be redundant
+    GC_RICH = ["p278","p85"]
 
     def __init__(self,rxns_info,contact_info):
         # Instance fields
         self.rxns_info = rxns_info
         self.contact_info = contact_info
-        self.workbook = load_workbook(filename=mcform_template)
+        self.workbook = load_workbook(filename=self.mcform_template)
         self.sheet = self.workbook[McOrder.order_sheet]
 
         self.generate_order()
@@ -46,56 +61,29 @@ class McOrder:
     # passing in as parameter?
     def add_rxns(self,info):
         rxns = self.parse_rxns(info)
-        rxn_row_start = 24
 
+        # this is the row on the spreadsheet where rxns start
+        rxn_row_start = 24 
         for i,rxn in enumerate(rxns):
             row = rxn_row_start + i
-
-            # RXN Cells C --> J
-            # TEMPLATE  | PRIMER
-            # Name Conc | Name Conc Tm DNA_type Size Notes
-            rxn_cells = [f"{col}{row}" for col in "CDEFGHIJ"]
-            for cell,entry in zip(rxn_cells,rxn):
-                self.sheet[cell] = entry
-
-
-    # TODO: provide an easier to read format
-    # google sheets currently has this column to simplify
-    def mc_dilute(self,num_rxns,conc,target_conc=100):
-        # NOTE:
-        # primers they want 3.2uM - 5uM
-        # 1ul per rxn but 3ul for safety
-        mc_min_vol = 3 * num_rxns # 1ul per rxn, mclab wants 3x to be safe
-        our_min_vol = 10 # we dilute into 10ul H2O
-        min_min = max(mc_min_vol,our_min_vol)
-
-        dilution_factor = (target_conc)/(conc-target_conc)
-        v1 = dilution_factor * min_min
-        v1 = round(v1,2)
-        return f"+ add {v1}ul into {min_min}ul of H2O"
+            rxn_cells = [(f"{col}{row}",value) for col,value in self.info_cols.items()]
+            # TODO: i do not like my naming here, rethink
+            for cell,value in rxn_cells:
+                self.sheet[cell] = getattr(rxn,value) # is there a better way?
 
     # Provide converted rxns object from JSON
     def parse_rxns(self, rxns_info):
         # TODO: make this read from an actual primers sheet in database
+        # TODO: add counts to see how much primer we need to provide
         melttemps = self.load_meltemps("res/meltemps.csv")
         rxns = []
-        unique_primers = set()
+        primers_count = []
         for plasmid,info in rxns_info.items():
             conc,primers = info.values()
 
-
-            # TODO: turn this into a separate function and print out an instruction sheet
-            # TODO: this could be calculated on the JS side and added into the JSON, and we can keep track of this
-            if conc != "":
-                num_rxns = len(primers)
-                dilute_instructions = self.mc_dilute(num_rxns,conc)
-                print(f"{plasmid}: ")
-                print(dilute_instructions)
-
-
             for p in primers:
                 # TODO: convert this section into a primer module or something
-                unique_primers.add(p) # trying to make a primer shopping list
+                primers_count.append(p)
                 try:
                     melt = melttemps[p]
                 except:
@@ -106,18 +94,21 @@ class McOrder:
                     handle = "GC Rich"
                 else:
                     handle = ""
+
                 rxn = mcRxn(t_name = plasmid,
-                      t_conc = 100,
                       p_name = p,
-                      p_conc = 3.2,
                       p_melt = melt,
-                      t_type = "plasmid",
-                      t_size = 10,
                       p_handle = handle)
 
                 rxns.append(rxn)
-        print("Get these primers out for use:")
-        print(unique_primers)
+        primers_count = Counter(primers_count)
+        for p in primers_count:
+            rxn_count = primers_count[p]
+            vol_needed = rxn_count * 3 # 1ul per rxn, McLab asked for 3x margin
+            print(f"Primer: {p} minimum volume: {vol_needed}ul")
+            
+        #print("Get these primers out for use:")
+        #print(unique_primers)
         return rxns
 
     def load_meltemps(self,filename):
@@ -132,6 +123,7 @@ class McOrder:
             mt = item["mt"]
             temp_dict[primer_id] = mt
         return temp_dict
+
     def save(self,directory):
         name = f"{directory}/{self.today} order.xlsx"
         self.workbook.save(filename=name)
@@ -139,17 +131,24 @@ class McOrder:
         # TODO: return link to saved file location
         return name
 
+# NOTE: the order here doesn't match the spreadsheet order
+# because default valued args go last
 @dataclass
 class mcRxn():
     t_name: str
-    t_conc: int # 100 ng/ul
     p_name: str
-    p_conc: float # 3.2  uM
     p_melt: int
-    t_type: str # "plasmid"
-    t_size: int # 10 kB
-
     p_handle: str # empty usually
+    t_conc: int = 100 # ng/ul
+    p_conc: float = 3.2  # uM
+    t_type: str = "plasmid"
+    t_size: int  = 10 # kB
+
 
     def __iter__(self):
         return iter(astuple(self))
+
+if __name__ == "__main__":
+    print("If you wish to place an order use mcorder.py.")
+    print("If you wish to download data use mcdown.py.")
+    print("If you wish to download and process barcodes use process_results.py")
