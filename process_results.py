@@ -71,3 +71,5 @@ if __name__ == "__main__":
         _,credentials_path = sys.argv
         reads_dir = main(credentials_path)
         process_barcodes(reads_dir)
+    else:
+        print("Usage: python process_results.py <mclabs credentials json>")

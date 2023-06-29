@@ -19,12 +19,17 @@ Tools for interfacing with McLab's Sequencing service
 
 ## Future
 - Clean up barcode code
+    - ISSUE: need to address key errors that occur if a barcode isn't in
+      dictionary
 - Create general interface to website
-  - Make ordering/downloading into selectable options from this interface
+    - FEATURE: Make ordering/downloading into selectable options from this interface
+    - FEATURE: Check online data files against local data files and download
+    accordingly
+    - FEATURE (sheets): create a sheet for sequencing results because we might
+      have re-runs of sequencing
 - Batch updates to google sheets to avoid rate limiting issues
 - Create GUI interface
   - Allow for specifying different users
   - Allow for clearer ordering
-- Revamp download code to bring in everything not just latest and organize by date (this is important for reruns)
 - Allow for full ordering sequence (entry into McLab) from program
   - be really careful with this, actual money LOL
