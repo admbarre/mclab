@@ -1,5 +1,5 @@
 # mcdown
-# donwloads the latest data from McLab's website
+# Downloads all data from McLab
 
 # Command line args
 import sys
@@ -50,76 +50,79 @@ def login(credentials):
     submit_button.click()
     return driver
 
-def download_latest(credentials):
-    max_pageload = 10 #seconds
-    # The selector for the download page
-    download_sel = "#header > div > div.tabs > ul > li.first > a"
-    # The selector for the top most download link
-    # TODO: probably a better way to read this table...?
-    # we could probably download the full table and then just update based on
-    # the date
-    top_download_sel = "#center-main > table > tbody > tr > td > table > tbody > tr > td > table > tbody > tr:nth-child(2) > td:nth-child(1) > a"
+def download_all(driver):
+    data_table_sel = "#center-main > table > tbody > tr > td > table > tbody > tr > td > table > tbody"
+    data_table = driver.find_element(By.CSS_SELECTOR, data_table_sel)
+    data_rows = data_table.find_elements(By.CSS_SELECTOR, "tr")
+    headers,*rows = data_rows
+    for row in rows:
+        # The link is in the first table data entry
+        link = row.find_element(By.TAG_NAME, "td")
+        if is_downloaded(link.text):
+            continue
+        else:
+            download_link(link)
+    driver.quit()
 
-    driver = login(credentials)
-    # Wait for download sequences link to load
-    wait = WebDriverWait(driver,max_pageload)
-    element = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR,download_sel)))
-    download_link = driver.find_element(By.CSS_SELECTOR,download_sel)
-    download_link.click()
+def download_link(link):
+    file_name = link.text
+    downloaded_file_path = os.path.join(download_dir,file_name)
 
-    # Wait for latest data link to load
-    wait = WebDriverWait(driver,max_pageload)
-    element = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR,top_download_sel)))
-    download_link = driver.find_element(By.CSS_SELECTOR,top_download_sel)
-    file_name = download_link.text
-    file_path = os.path.join(download_dir,file_name)
-    new_path = f"{seq_dir}/{file_name}"
-    new_dir = new_path.split(".zip")[0]
-
-    # TODO: there is a lot of repetition here and room for optimizing the flow
-    if os.path.exists(file_path):
-        print("Already downloaded latest")
-        driver.quit()
-        return file_path
-    elif os.path.exists(new_dir):
-        print("Already downloaded and moved latest")
-        driver.quit()
-        return file_path
-
-    download_link.click()
+    link.click()
     check_interval = 15 # seconds
     max_timeout = 10 # intervals
     wait_time = check_interval * max_timeout
     interval = 0
 
+    print("---"*15)
+    print(file_name)
+    print("---"*15)
     print(f"Download has started, will wait for {wait_time} seconds")
-    while not os.path.exists(file_path) and interval < max_timeout:
+    while not os.path.exists(downloaded_file_path) and interval < max_timeout:
         time.sleep(check_interval)
         interval = interval + 1
         print(f"Waiting for download...[{interval*check_interval}/{wait_time}s]")
-    driver.quit()
-    return file_path
+    # TODO: need to add check to make sure that file downloaded
+    print("***")
+    move_download(downloaded_file_path)
 
-def move_data(filepath):
-    filename = filepath.split("/")[-1]
-    new_path = f"{seq_dir}/{filename}"
-    new_dir = new_path.split(".zip")[0]
+def is_downloaded(datafile):
+    folder_name = datafile.split(".zip")[0]
+    seqs = [f for f in os.listdir(seq_dir)]
+    if folder_name in seqs:
+        print(f"{datafile} already in sequencing dir")
+        return True
+    return False
 
-    if os.path.exists(new_dir):
-        print("Already moved file")
-        return new_dir
+def goto_data_page(driver):
+    max_pageload = 10 #seconds
+    # The selector for the download page
+    download_sel = "#header > div > div.tabs > ul > li.first > a"
 
-    shutil.move(filepath,new_path)
-    with zipfile.ZipFile(new_path, "r") as zip_ref:
+    # Wait for download sequences link to load
+    wait = WebDriverWait(driver,max_pageload)
+    # TODO: what does element do here? does it return the element?
+    element = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR,download_sel)))
+    download_link = driver.find_element(By.CSS_SELECTOR,download_sel)
+    download_link.click()
+
+# Does not check for file existing because precondition
+def move_download(downloaded_file_path):
+    filename = downloaded_file_path.split("/")[-1]
+    new_path_zip = f"{seq_dir}/{filename}"
+    new_dir = new_path_zip.split(".zip")[0]
+
+    shutil.move(downloaded_file_path,new_path_zip)
+    with zipfile.ZipFile(new_path_zip, "r") as zip_ref:
         zip_ref.extractall(new_dir)
-    return new_dir
+    os.remove(new_path_zip)
 
 # TODO: pick a better name for this
 def main(credentials_path):
-    credentials = load_credentials(credentials_path)
-    filepath = download_latest(credentials)
-    reads_dir = move_data(filepath)
-    return reads_dir
+    creds = load_credentials(credentials_path)
+    driver = login(creds)
+    goto_data_page(driver)
+    download_all(driver)
 
 if __name__ == "__main__":
     if len(sys.argv) ==2:
