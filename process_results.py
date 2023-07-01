@@ -12,6 +12,8 @@ def parse_abi_name(abi_name):
 
 def parse_dirname(reads_dir):
     name = reads_dir.split("/")[-1]
+    print(name)
+    print("---"*15)
     email,order_id,*tail = name.split("_")
     if len(tail) == 2:
         re,seq_date = tail
@@ -19,7 +21,7 @@ def parse_dirname(reads_dir):
         print("--rerun")
     else:
         seq_date = tail[0]
-    rerun = ''
+        rerun = ''
     return email,order_id,seq_date,rerun
 
 def init_worksheet():
@@ -43,7 +45,6 @@ def process_barcodes(reads_dir,wks,verbose=False):
     abis = sorted([f"{reads_dir}/{f}" for f in os.listdir(reads_dir) if f.endswith(".ab1") and not f.startswith(".")])
     items = len(abis)
 
-    print(reads_dir)
     print(f"Processing {items} items...")
     print("---"*15)
 
@@ -56,6 +57,7 @@ def process_barcodes(reads_dir,wks,verbose=False):
         bcode = get_barcode(abi)
         abi_name = abi.split("/")[-1]
         row = [*parse_abi_name(abi_name),rerun,bcode,order_id,seq_date]
+        print(row)
         rows.append(row)
         if verbose:
             for item in row:
@@ -69,6 +71,7 @@ def process_barcodes(reads_dir,wks,verbose=False):
     cell_range = f"{first_cell}:{last_cell}"
     
     sheet.update(cell_range,rows)
+    
 
 def get_unprocessed_folders(seq_dir,wks):
     seqs = [f for f in os.listdir(seq_dir) if not f.startswith(".") and not f == "old"]
