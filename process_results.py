@@ -1,21 +1,26 @@
-import sys
-import time
-
 import os
 from barcode import get_barcode
+from gspread.utils import rowcol_to_a1
 import gspread
 
-req_per_min = 60 # i think
 def parse_abi_name(abi_name):
     abi_name = abi_name.split(".ab1")[0]
     abi_tokens = reversed(abi_name.split("_"))
-    well,primer,colony,plate,name = abi_tokens
-    return name,plate,colony,primer
+    well,primer,colony,*plate, = abi_tokens
+    plate = "_".join(reversed(plate))
+    return plate,colony,primer
 
 def parse_dirname(reads_dir):
     name = reads_dir.split("/")[-1]
-    email,order_id,seq_date = name.split("_")
-    return email,order_id,seq_date
+    email,order_id,*tail = name.split("_")
+    if len(tail) == 2:
+        re,seq_date = tail
+        rerun = "TRUE"
+        print("--rerun")
+    else:
+        seq_date = tail[0]
+    rerun = ''
+    return email,order_id,seq_date,rerun
 
 def init_worksheet():
     gc = gspread.oauth()
@@ -23,52 +28,47 @@ def init_worksheet():
     return wks
 
 def process_folder(folder,wks):
+    reads_dir = f"{seq_dir}/{folder}"
+    process_barcodes(reads_dir,wks)
+
     processed_sheet = wks.worksheet("processed_folders")
     folder_cols = processed_sheet.find("folder_name").col
     folders = processed_sheet.col_values(folder_cols)
     next_row = len(folders) + 1
-
     processed_sheet.update_cell(next_row,folder_cols,folder)
-    reads_dir = f"{seq_dir}/{folder}"
-    process_barcodes(reads_dir,wks)
 
 
-def process_barcodes(reads_dir,wks,verbose=True):
-    _,order_id,seq_date = parse_dirname(reads_dir)
+def process_barcodes(reads_dir,wks,verbose=False):
+    _,order_id,seq_date,rerun = parse_dirname(reads_dir)
     abis = sorted([f"{reads_dir}/{f}" for f in os.listdir(reads_dir) if f.endswith(".ab1") and not f.startswith(".")])
     items = len(abis)
 
+    print(reads_dir)
     print(f"Processing {items} items...")
-    print("application maybe throttled, idk how to do this ideally with rate limiting")
-    print(" ¯\_(ツ)_/¯")
+    print("---"*15)
 
     sheet = wks.worksheet("sequencing")
-    name_col = sheet.find("Name")
-    plate_col = sheet.find("Plate")
-    colony_col = sheet.find("Colony")
-    primer_col = sheet.find("Primer")
-    barcode_col = sheet.find("Barcode").col
-    order_col = sheet.find("order_id").col
-    seq_date_col = sheet.find("seq_date").col
+    first_col = sheet.find("Plate").col
+    last_col = sheet.find("seq_date").col
 
     rows = []
     for abi in abis:
         bcode = get_barcode(abi)
         abi_name = abi.split("/")[-1]
-        name,plate,colony,primer = parse_abi_name(abi_name)
-        row = [name,plate,colony,primer,bcode,order_id,seq_date]
+        row = [*parse_abi_name(abi_name),rerun,bcode,order_id,seq_date]
         rows.append(row)
         if verbose:
             for item in row:
                 print(item)
             print("---")
 
-    next_row = len(wks.col_values(name_col))+1
+    next_row = len(sheet.col_values(first_col))+1
     last_row = next_row + items
-    first_cell = f"{name_col}{next_row}"
-    last_cell = f"{seq_date_col}{last_row}"
+    first_cell = rowcol_to_a1(next_row,first_col)
+    last_cell = rowcol_to_a1(last_row,last_col)
     cell_range = f"{first_cell}:{last_cell}"
-    wks.update(cell_range,rows)
+    
+    sheet.update(cell_range,rows)
 
 def get_unprocessed_folders(seq_dir,wks):
     seqs = [f for f in os.listdir(seq_dir) if not f.startswith(".") and not f == "old"]
