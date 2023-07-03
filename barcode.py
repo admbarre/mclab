@@ -26,12 +26,11 @@ def read_barcode(st):
     # Searches for barcodes (4 bits) spaced across fixed sequences
     regex_pattern = "ctacc([AGTC]{4})caac([AGTC]{4})aggagccctcaagtca([AGTC]{4})gctc([AGTC]{4})ccatcc"
 
-    # What happens if not all sections are found...?
-    # TODO: key errors need to be handled! if barcode is wrong it will throw an
-    # error
-    m = re.search(regex_pattern,st,re.IGNORECASE)
-    if m:
-        first,*rest = m.groups()
+
+    # TODO: I think this is having false negatives but not sure why
+    match = re.search(regex_pattern,st,re.IGNORECASE)
+    if match:
+        first,*rest = match.groups()
         # NOTE: adding an X if we have an unknown barcode in a position
         # not sure if this is the best way to do it
         # but prevents keyerrors from halting
@@ -50,6 +49,7 @@ def read_barcode(st):
         barcode_array = [first_bit] + rest_bits
         return 'bc'+''.join([str(i) for i in barcode_array])
     else:
+        # TODO: need to troubleshoot certain false negatives
         return "barcode not found"
     
 def getseq(abifile):    
