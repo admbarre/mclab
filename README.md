@@ -18,16 +18,18 @@ Tools for interfacing with McLab's Sequencing service
 - Module for scanning for scanning for barcodes
 
 ## Future
+- Move features and issues list to GitHub and out of readme
 - Clean up barcode code
-    - ISSUE: need to address key errors that occur if a barcode isn't in
-      dictionary
+    - ~~ISSUE: need to address key errors that occur if a barcode isn't in
+      dictionary~~
+      - FEATURES: add other processing functions (read quality, graphics...?)
 - Create general interface to website
     - FEATURE: Make ordering/downloading into selectable options from this interface
-    - FEATURE: Check online data files against local data files and download
-    accordingly
-    - FEATURE (sheets): create a sheet for sequencing results because we might
-      have re-runs of sequencing
-- Batch updates to google sheets to avoid rate limiting issues
+    - ~~FEATURE: Check online data files against local data files and download
+    accordingly~~
+    - ~~FEATURE (sheets): create a sheet for sequencing results because we might
+      have re-runs of sequencing~~
+- ~~Batch updates to google sheets to avoid rate limiting issues~~
 - Create GUI interface
   - Allow for specifying different users
   - Allow for clearer ordering
