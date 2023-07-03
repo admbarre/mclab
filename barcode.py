@@ -15,7 +15,7 @@ def read_barcode(st):
                'AAGT':5,
                'CATG':6}
     # again, special dictionary for the first bit
-    bitsdic_old_a = {'TAAT':0,
+    first_bit_dict = {'TAAT':0,
                      'ATCC':1,
                      'CGCA':2,
                      'TCTC':3,
@@ -36,14 +36,14 @@ def read_barcode(st):
         # not sure if this is the best way to do it
         # but prevents keyerrors from halting
         try:
-            first_bit = bitsdic_old_a[first]
+            first_bit = first_bit_dict[first]
         except(KeyError):
             first_bit = "x"
 
         rest_bits = []
         for bit in rest:
             try:
-                rest_bits.append(bitsdic_old_a[bit])
+                rest_bits.append(bitsdic[bit])
             except(KeyError):
                 rest_bits.append("x")
             
