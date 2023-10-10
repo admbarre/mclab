@@ -88,7 +88,7 @@ class McOrder:
                 try:
                     melt = melttemps[p]
                 except:
-                    print("Melting temp not available, put in manually")
+                    print(f"{p}: Melting temp not available, put in manually")
                     melt = -1
 
                 if p in McOrder.GC_RICH:
@@ -106,7 +106,10 @@ class McOrder:
         for p in primers_count:
             rxn_count = primers_count[p]
             vol_needed = rxn_count * 3 # 1ul per rxn, McLab asked for 3x margin
-            print(f"Primer: {p} minimum volume: {vol_needed}ul")
+            primer_dilution = 30
+            primer_to_add = vol_needed/primer_dilution
+            water_vol = vol_needed - primer_to_add
+            print(f"Primer: {p} add: {primer_to_add}ul to {water_vol}ul of water")
             
         print(f"Reactions: {len(rxns)}")
         return rxns
